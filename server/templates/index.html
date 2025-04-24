@@ -95,8 +95,8 @@
 <body>
 <h1>Degrees of Management</h1>
 
-{% for (game_id, game_instances) in instance_map %}
-<h2>{{ game_id }}</h2>
+{% for ((game_id, game_name), game_instances) in instance_map %}
+<h2>{{ game_name }}</h2>
 {% for instance in game_instances %}
 <div class="instance-card">
     <div class="instance-name">{{ instance.get_name() }}</div>

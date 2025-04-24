@@ -11,18 +11,18 @@ use tracing::error;
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate<'a> {
-    instance_map: Vec<(String, Vec<&'a InstanceInfo>)>,
+    instance_map: Vec<((String, String), Vec<&'a InstanceInfo>)>,
 }
 
 pub async fn index_page(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let instance_map: Vec<(String, Vec<&InstanceInfo>)> = state
+    let instance_map: Vec<((String, String), Vec<&InstanceInfo>)> = state
         .registry
         .all()
         .iter()
         .map(|(id, game_info)| {
             if let Some(game_name) = &game_info.game_def.name {
                 (
-                    game_name.clone(),
+                    (id.clone(), game_name.clone()),
                     game_info
                         .instances
                         .iter()
@@ -31,7 +31,7 @@ pub async fn index_page(State(state): State<Arc<AppState>>) -> impl IntoResponse
                 )
             } else {
                 (
-                    id.clone(),
+                    (id.clone(), id.clone()),
                     game_info
                         .instances
                         .iter()
