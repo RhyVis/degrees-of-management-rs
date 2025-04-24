@@ -42,6 +42,7 @@
                             await ssm_save_get();
                         }
                     } else {
+                        alert("Save file list could not be loaded.");
                         code.value = "Save file list could not be loaded";
                     }
                 });
@@ -90,7 +91,9 @@
             if (id.length > 0) {
                 let resp = await fetch(`save-sync/access/${id}`, { method: "DELETE" });
                 msg = await resp.text();
+                alert("Successfully deleted save file.");
             } else {
+                alert("Failed to delete save file.");
                 msg = "Please select a valid save.";
             }
             document.querySelector("#ssm_msg").textContent = msg;

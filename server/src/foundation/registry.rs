@@ -228,6 +228,8 @@ impl GameRegistry {
 pub trait Registry<T> {
     fn add(&mut self, item: T);
     fn get(&self, id: &str) -> Option<&T>;
+
+    fn all(&self) -> Vec<(String, &T)>;
 }
 
 impl Registry<GameInfo> for GameRegistry {
@@ -237,5 +239,12 @@ impl Registry<GameInfo> for GameRegistry {
 
     fn get(&self, id: &str) -> Option<&GameInfo> {
         self.registry.get(id)
+    }
+
+    fn all(&self) -> Vec<(String, &GameInfo)> {
+        self.registry
+            .iter()
+            .map(|(id, game)| (id.clone(), game))
+            .collect()
     }
 }

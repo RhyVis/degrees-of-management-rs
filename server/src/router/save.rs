@@ -11,7 +11,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 const SAVE_FILE_EXTENSION: &str = "save";
 
@@ -41,12 +41,14 @@ pub async fn handle_save_get(
             return StatusCode::NOT_FOUND.into_response();
         }
     };
+    
+    info!("Request save file: {}-{}-{}", game_id, instance_id, save_id);
 
     content.into_response()
 }
 
 pub async fn handle_save_del(
-    Path((game_id, instance_id)): Path<(String, String)>,
+    Path((game_id, instance_id, save_id)): Path<(String, String, String)>,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     let game = match extract_game(&state, &game_id) {
@@ -54,9 +56,10 @@ pub async fn handle_save_del(
         Err(response) => return response.into_response(),
     };
 
-    del_save_content(&game.get_save_path_append(&instance_id), &game_id);
-
-    StatusCode::NO_CONTENT.into_response()
+    del_save_content(&game.get_save_path_append(&instance_id), &save_id);
+    
+    info!("Delete save file: {}-{}", game_id, instance_id);
+    format!("Successfully deleted {save_id}").into_response()
 }
 
 pub async fn handle_save_upload(
@@ -75,7 +78,9 @@ pub async fn handle_save_upload(
         &instance_id,
         save_code,
     ) {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => { 
+            info!("Save file successfully: {}-{}", game_id, instance_id);
+            StatusCode::NO_CONTENT.into_response() },
         Err(err) => {
             error!(
                 "Failed to write save file ({game_id}-{instance_id}): {}",

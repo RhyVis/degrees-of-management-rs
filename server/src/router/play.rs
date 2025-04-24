@@ -9,7 +9,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use std::fs;
 use std::sync::Arc;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 pub fn routes() -> Router<Arc<AppState>> {
     Router::new()
@@ -47,6 +47,8 @@ async fn handle_play_index(
         Ok(result) => result,
         Err(response) => return response.into_response(),
     };
+
+    info!("Game playing: ({}) {}", &game_id, &instance_id);
 
     match fs::read_to_string(&index_info.path) {
         Ok(content) => Html(content).into_response(),

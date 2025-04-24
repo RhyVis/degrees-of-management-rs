@@ -7,16 +7,26 @@ Combine games, images, and mods through preset methods.
 ## Quick Start
 Run the program, and the configuration file `config.toml` will be automatically created on the first run.
 
-After completing the configuration below, visit http://localhost:8080 to access the main interface.
+After completing the configuration below, visit http://localhost:3000 to access the main interface. Port can be configured through the `port` field, default is 3000.
 
-The `rootDir` field configures the folder where the data files are nested, default is `data`.
-
-Also, you can access docker builds in 'Packages'.
+The `data_dir` field configures the folder where the data files are nested, default is `data`.
 
 ### Data Folders
-The data folder by default contains `foundation`, `layer`, `mod`, `instance`, `save`.
+The data folder by default contains `index`, `layer`, `mod`, `instance`, `save`, wrapped by game's id.
 
-#### Foundation
+At least one game should be defined in `config.toml`, and the `id` field in the configuration file should be consistent with the folder name.
+
+`````toml
+data_dir = "data"
+
+[game_def.dol]
+use_mods = true
+
+[game_def.other]
+use_mods = false
+`````
+
+#### Index
 This directory is used to store the main game files {version}.html, which are shared game files. The file name without the .html extension is its `id`.
 
 #### Layer
@@ -39,7 +49,7 @@ This feature is inspired by https://github.com/ZB94/dol_save_server and modified
 {
   "id": "The ID of this instance, ensure it is unique",
   "name": "The display name of this instance",
-  "foundation": "The ID of the main file (Foundation)",
+  "index": "The ID of the main file (Index)",
   "layers": [
     "Layer IDs stored in an array",
     "The later the layer in this list, the higher its priority in the overlay relationship"
@@ -53,10 +63,10 @@ This feature is inspired by https://github.com/ZB94/dol_save_server and modified
 
 Here is an example:
 
-The structure of the `data` folder is as follows:
+The structure of the `data\{game_id}` folder is as follows:
 ````
-data
-├── foundation
+'{game_id}'
+├── index
 │   ├── 1.0.html
 │   ├── 1.1.html
 │   └── 1.2.html
@@ -76,7 +86,7 @@ The content of the `Instance.json` file is as follows:
 {
   "id": "1.0",
   "name": "Primitive",
-  "foundation": "1.0",
+  "index": "1.0",
   "layers": [
     "GameOriginalImage",
     "SomeImagePatch"
@@ -87,15 +97,15 @@ The content of the `Instance.json` file is as follows:
 }
 ````
 
-Finally, when accessing the game, it will be combined into an instance named `1.0`, accessible at the path `/dol/{id}/index`.
+Finally, when accessing the game, it will be combined into an instance named `Primitive`, accessible at the path `/play/{game_id}/1.0/index`.
 
 When loading image files, it will first try to load from `SomeImagePatch`, then from `GameOriginalImage`. The mod will load the `I18N` mod.
 
-**Note: All references fields in foundation, layers, mods do not contain extension names.**
+**Note: All references fields in index, layers, mods do not contain extension names.**
 
 ## Build
 
 If you need to modify the save-sync-integration mod used for synchronizing saves, execute the `pack` task, which will automatically package the mod and copy it to the server resource folder.
 Packaging requires additional `dist-insertTools`, see the official repository of ModLoader for details.
 
-For the server, simply execute `build`, and you can find the packages for Windows or Linux in `build/distributions`. A local Java environment is required.
+For the server, simply execute `cargo build --release`.
