@@ -5,7 +5,7 @@ use crate::util::resolve::{FileSystemTree, InstanceFS};
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fs;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub fn init_registry() -> Result<GameRegistry> {
     info!("Game registry initialized");
@@ -61,15 +61,23 @@ fn load_games(registry: &mut GameRegistry) -> Result<()> {
 
             walk_game_dir(config)?;
 
-            for (id, _) in &config.game_def {
+            for (id, def) in &config.game_def {
                 info!("Loading game: '{}'", id);
 
                 let that_path = data_dir.join(id);
-                let mut that_game = GameInfo::of(id, that_path);
+                let mut that_game = GameInfo::of(id, that_path, def.clone());
 
+                debug!("Loading index for game: {}", id);
                 load_index(&mut that_game)?;
-                load_mod(&mut that_game)?;
+
+                if def.use_mods {
+                    debug!("Loading mod for game: {}", id);
+                    load_mod(&mut that_game)?;
+                }
+
+                debug!("Loading layer for game: {}", id);
                 load_layer(&mut that_game)?;
+                debug!("Loading instance for game: {}", id);
                 load_instance(&mut that_game)?;
 
                 if !that_game.get_save_path().exists() {
@@ -194,7 +202,8 @@ fn load_instance(game: &mut GameInfo) -> Result<()> {
                     }
                 }
             } else {
-                warn!("Layer {} referenced by instance {} not found", layer_id, id);
+                error!("Layer {} referenced by instance {} not found", layer_id, id);
+                panic!("Layer {} referenced by instance {} not found", layer_id, id);
             }
         }
 
@@ -202,7 +211,7 @@ fn load_instance(game: &mut GameInfo) -> Result<()> {
 
         let stats = instance_fs.get_node_stats();
         info!(
-            "Instance '{}' fs contains {} nodes ({} dirs, {} files)",
+            "Created instance '{}' fs contains {} nodes ({} dirs, {} files)",
             &id, stats.total, stats.dirs, stats.files
         );
 

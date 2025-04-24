@@ -1,3 +1,4 @@
+use crate::router::repo::SAVE_SYNC_INTEGRATION_MOD_ID;
 use crate::router::save;
 use crate::util::AppState;
 use crate::util::extract::{extract_game, extract_game_instance, extract_index};
@@ -75,13 +76,23 @@ async fn handle_mod_list(
         Err(response) => return response.into_response(),
     };
 
+    if !game.game_def.use_mods {
+        return (
+            StatusCode::NOT_FOUND,
+            format!("Game {} does not support mods", game_id),
+        )
+            .into_response();
+    }
+
     let mut mods: Vec<String> = instance
         .mods
         .iter()
         .filter(|mod_id| game.mods.get(*mod_id).is_some())
         .map(|mod_id| format!("/repo/mod/{game_id}/{mod_id}"))
         .collect();
-    mods.push(format!("/repo/mod/{game_id}/save-sync-integration"));
+    mods.push(format!(
+        "/repo/mod/{game_id}/{SAVE_SYNC_INTEGRATION_MOD_ID}"
+    ));
 
     Json(mods).into_response()
 }
@@ -100,7 +111,7 @@ async fn handle_other_file(
         None => {
             error!(
                 "Unable to find instance fs for game {}, instance id {}",
-                game_id, instance_id
+                &game_id, &instance_id
             );
             return (
                 StatusCode::NOT_FOUND,

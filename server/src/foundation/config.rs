@@ -18,7 +18,11 @@ pub fn init_config() -> Result<()> {
             error!("Error loading config: {}", err);
             Config::create_default().unwrap_or_else(|err| {
                 let path = Config::get_config_path().unwrap_or(PathBuf::new().join("!Unknown"));
-                error!("Error creating default config on {}: {}",path.to_string_lossy().to_string(), err);
+                error!(
+                    "Error creating default config on {}: {}",
+                    path.to_string_lossy().to_string(),
+                    err
+                );
                 panic!("Failed to create default config");
             })
         })
@@ -57,7 +61,7 @@ impl Config {
         let config = Self::default();
         let config_content = toml::to_string_pretty(&config)?;
         let config_path = Self::get_config_path()?;
-        
+
         info!("Creating default config at {:?}", &config_path);
 
         let mut file = File::create(config_path)?;
@@ -116,7 +120,7 @@ impl Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct GameDef {
     pub use_mods: bool,
@@ -124,6 +128,6 @@ pub struct GameDef {
 
 impl Default for GameDef {
     fn default() -> Self {
-        GameDef { use_mods: false }
+        GameDef { use_mods: true }
     }
 }
