@@ -1,0 +1,6 @@
+[
+  {
+    "id": "ssm_inject_tab",
+    "replace": "$&<</button>><<button \"云存档\">><<toggleTab>><<replace #customOverlayContent>><<save_sync_menu>><</replace>>"
+  }
+]

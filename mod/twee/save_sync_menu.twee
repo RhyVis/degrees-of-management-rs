@@ -1,0 +1,112 @@
+:: save_sync_menu [widget]
+
+<<widget "save_sync_menu">>
+    <div>
+        <select id="ssm_list" autocomplete="off">
+            <option value="" selected>Select Save File</option>
+        </select>
+        <button id="ssm_refresh">Refresh</button>
+        <button id="ssm_delete" style="color: red;">Delete</button>
+        <button id="ssm_load">Load</button>
+    </div>
+    <div>
+        <p id="ssm_msg" style="color: red;"></p>
+    </div>
+    <div>
+        <p>Save Name Alias</p>
+        <input id="ssm_name_input" placeholder="anonymous" />
+        <button id="ssm_upload">Upload</button>
+    </div>
+    <div>
+        <p>Save Code</p>
+        <textarea id="ssm_save_code" cols="100" rows="20" autocomplete="off" readonly></textarea>
+    </div>
+    <<script>>
+        async function ssm_list_get() {
+            let list = document.querySelector("#ssm_list");
+            let code = document.querySelector("#ssm_save_code");
+            await fetch("save-sync/list")
+                .then(async (resp) => {
+                    list.innerHTML = "";
+                    if (resp.ok) {
+                        let l = await resp.json();
+                        if (l.length === 0) {
+                            code.value = "No save file exists at the moment";
+                        } else {
+                            l.forEach(save => {
+                                let option = document.createElement("option");
+                                option.value = save;
+                                option.textContent = save;
+                                list.appendChild(option);
+                            });
+                            await ssm_save_get();
+                        }
+                    } else {
+                        code.value = "Save file list could not be loaded";
+                    }
+                });
+        }
+
+        async function ssm_save_upload() {
+            const compressionWasEnabled = DoLSave.isCompressionEnabled();
+            DoLSave.disableCompression();
+            const code = Save.serialize();
+            if (code == null) return;
+            const alias = document.querySelector("#ssm_name_input").value;
+            try {
+                await fetch("save-sync/access", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ alias, code })
+                });
+            } catch (e) {
+                alert("Failed to upload save file.");
+            }
+            if (compressionWasEnabled) DoLSave.enableCompression();
+            alert("Successfully uploaded save file.");
+            await ssm_list_get();
+        }
+
+        async function ssm_save_get() {
+            let list = document.querySelector("#ssm_list");
+            let code = document.querySelector("#ssm_save_code");
+            let id = list.value;
+            if (id.length > 0) {
+                let resp = await fetch(`save-sync/access/${id}`);
+                if (resp.ok) {
+                    code.value = await resp.text();
+                }
+            } else {
+                code.value = "";
+            }
+        }
+
+        async function ssm_save_delete() {
+            let list = document.querySelector("#ssm_list");
+            let id = list.value;
+            let msg = "";
+            if (id.length > 0) {
+                let resp = await fetch(`save-sync/access/${id}`, { method: "DELETE" });
+                msg = await resp.text();
+            } else {
+                msg = "Please select a valid save.";
+            }
+            document.querySelector("#ssm_msg").textContent = msg;
+            await ssm_list_get();
+        }
+
+        async function ssm_init() {
+            document.querySelector("#ssm_list").onchange = ssm_save_get;
+            document.querySelector("#ssm_refresh").onclick = ssm_list_get;
+            document.querySelector("#ssm_upload").onclick = ssm_save_upload;
+            document.querySelector("#ssm_delete").onclick = ssm_save_delete;
+            document.querySelector("#ssm_load").onclick = () => Save.deserialize(document.querySelector("#ssm_save_code").value);
+
+            await document.querySelector("#ssm_refresh").click();
+        }
+
+        setTimeout(ssm_init, 0);
+    <</script>>
+<</widget>>

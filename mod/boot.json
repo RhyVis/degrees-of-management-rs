@@ -1,0 +1,64 @@
+{
+  "name": "save-sync-integration",
+  "version": "1.0.0",
+  "styleFileList": [],
+  "scriptFileList_earlyload": [],
+  "scriptFileList_inject_early": [],
+  "scriptFileList_preload": [],
+  "scriptFileList": [],
+  "tweeFileList": ["twee/save_sync_menu.twee"],
+  "imgFileList": [],
+  "imgFileReplaceList": [],
+  "additionFile": [
+    "README.md",
+    "LICENSE",
+    "LICENSE-Original",
+    "replace/replaceIndex.json",
+    "replace/find_en.json",
+    "replace/find_zh.json",
+    "replace/replace_en.json",
+    "replace/replace_zh.json"
+  ],
+  "addonPlugin": [
+    {
+      "modName": "I18nTweeReplacer",
+      "addonName": "I18nTweeReplacerAddon",
+      "modVersion": "^1.0.0",
+      "params": {
+        "replaceIndexFile": "replace/replaceIndex.json",
+        "mainFindLanguage": "en-US",
+        "mainReplaceLanguage": "en-US",
+        "findLanguageFile": [
+          {
+            "language": "en-US",
+            "file": "replace/find_en.json"
+          },
+          {
+            "language": "zh-CN",
+            "file": "replace/find_zh.json"
+          }
+        ],
+        "replaceLanguageFile": [
+          {
+            "language": "en-US",
+            "file": "replace/replace_en.json"
+          },
+          {
+            "language": "zh-CN",
+            "file": "replace/replace_zh.json"
+          }
+        ]
+      }
+    }
+  ],
+  "dependenceInfo": [
+    {
+      "modName": "ModLoader",
+      "version": "^2.17.1"
+    },
+    {
+      "modName": "I18nTweeReplacer",
+      "version": "^1.0.0"
+    }
+  ]
+}

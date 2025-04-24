@@ -1,0 +1,6 @@
+[
+  {
+    "id": "ssm_inject_tab",
+    "findRegex": "<<toggleTab>>\\s*<<replace #customOverlayContent>><<optionsExportImport>><</replace>>"
+  }
+]
