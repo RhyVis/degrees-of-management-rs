@@ -4,49 +4,64 @@
 
 通过预设的方式组合游戏，图像与模组。
 
+最初只是为DoL开发，目前对HTML游戏都算有所支持，尤其是使用ModLoader的SugarCube游戏，用Rust重写纯粹是老项目的JVM太吃内存了，小小个人服务器不喜欢浪费。
+
 本项目仅供学习交流，研究游戏原理使用，本人不支持任何形式的公开DoL分发。
 
 ## 快速开始
+
 执行程序，在第一次执行文件时会自动创建配置文件config.toml
 
 在下面的配置完成后，访问 http://localhost:3000 即可访问主界面。端口可以通过`port`字段配置，默认为3000。
 
-`data_dir`字段配置数据文件被嵌套的文件夹，默认为`data`
+`data_dir`字段配置数据文件存储位置game_id，每个游戏的数据存储在对于`game_id`为名的目录下，默认为`data`
 
 当然，你也可以使用Docker版本，在 'Packages' 中可以找到。
 
 ### 数据文件夹
-数据文件夹默认有`index`，`layer`，`mod`，`instance`，`save`。
+
+每个游戏定义有独立的数据文件夹，数据文件夹默认有`index`，`layer`，`mod`，`instance`，`save`。
 
 #### Index
+
 该目录用于存储{version}.html的游戏主文件，用来作为共享的游戏主文件，去除.html后缀的文件名为它的`id`。
 
 在`config.toml`中至少应该定义一个游戏，配置文件中的`id`字段应该与文件夹名称保持一致。
+
+通过Game的设置，可以管理各种HTML游戏。
 
 ````toml
 data_dir = "data"
 
 [game_def.dol]
+name = "可选的显示名称"
 use_mods = true
 
 [game_def.other]
 use_mods = false
+use_save_sync_mod = false # 只有在use_mods为true时才会生效
 ````
 
 #### Layer
+
 该目录用于存储`img/**`等其它类型的文件，每个文件夹的名字为它的`id`。
 
 #### Mod
+
 该目录用于请求用于ModLoader请求的模组文件，去除.zip后缀的文件名为它的`id`。
 
 #### Instance
+
 该目录存储配置文件，每个文件为一个独立配置：
 
 #### Save
+
 该目录存储运行中从网页同步的存档文件，可以在存档加载页面附加的“云存档”标签下找到上传与加载功能，与通常的存档码类似。
 该功能受 https://github.com/ZB94/dol_save_server 的启发，修改自该项目中的实现。
 
 **存档目录与Instance的ID绑定，确保不要经常修改Instance ID**
+
+Instance配置文件也可以使用toml和yaml格式。
 
 ````json
 {
@@ -58,7 +73,7 @@ use_mods = false
     "该列表中位置越后的Layer在覆盖关系中优先级最高"
   ],
   "mods": [
-    "数组形式存储的Mod ID", 
+    "数组形式存储的Mod ID",
     "在访问游戏时自动加载，顺序即为加载排序"
   ]
 }
@@ -67,6 +82,7 @@ use_mods = false
 下面是一个示例：
 
 `data\{game_id}`文件夹结构如下：
+
 ````
 '{game_id}'
 ├── foundation
@@ -85,6 +101,7 @@ use_mods = false
 ````
 
 `Instance.json`文件内容如下：
+
 ````json
 {
   "id": "1.0",

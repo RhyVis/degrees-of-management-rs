@@ -125,6 +125,7 @@ impl Config {
 pub struct GameDef {
     pub name: Option<String>,
     pub use_mods: bool,
+    pub use_save_sync_mod: bool,
 }
 
 impl Default for GameDef {
@@ -132,6 +133,13 @@ impl Default for GameDef {
         GameDef {
             name: None,
             use_mods: true,
+            use_save_sync_mod: true,
         }
+    }
+}
+
+impl GameDef {
+    pub fn is_use_save_sync_mod(&self) -> bool {
+        self.use_mods && self.use_save_sync_mod
     }
 }

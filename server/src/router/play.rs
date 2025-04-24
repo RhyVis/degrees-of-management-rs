@@ -90,9 +90,12 @@ async fn handle_mod_list(
         .filter(|mod_id| game.mods.get(*mod_id).is_some())
         .map(|mod_id| format!("/repo/mod/{game_id}/{mod_id}"))
         .collect();
-    mods.push(format!(
-        "/repo/mod/{game_id}/{SAVE_SYNC_INTEGRATION_MOD_ID}"
-    ));
+
+    if game.game_def.is_use_save_sync_mod() {
+        mods.push(format!(
+            "/repo/mod/{game_id}/{SAVE_SYNC_INTEGRATION_MOD_ID}"
+        ));
+    }
 
     Json(mods).into_response()
 }
