@@ -13,7 +13,7 @@ pub enum FSNode {
     Directory { children: HashMap<String, FSNode> },
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct NodeStats {
     pub files: usize,
     pub dirs: usize,
@@ -60,7 +60,7 @@ pub struct LayerFS {
 }
 
 impl LayerFS {
-    pub fn new(id: &str, base_path: &Path) -> Result<Self> {
+    pub fn new(id: &str, layer_path: &Path) -> Result<Self> {
         let start = Instant::now();
 
         let root = FSNode::Directory {
@@ -69,7 +69,7 @@ impl LayerFS {
 
         let mut layer_fs = LayerFS { root };
 
-        layer_fs.build_tree(base_path)?;
+        layer_fs.build_tree(layer_path)?;
 
         let elapsed = start.elapsed();
         info!("LayerFS '{}' created in {:.2?} seconds", id, elapsed);

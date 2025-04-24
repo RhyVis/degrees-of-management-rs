@@ -123,11 +123,15 @@ impl Config {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct GameDef {
+    pub name: Option<String>,
     pub use_mods: bool,
 }
 
 impl Default for GameDef {
     fn default() -> Self {
-        GameDef { use_mods: true }
+        GameDef {
+            name: None,
+            use_mods: true,
+        }
     }
 }

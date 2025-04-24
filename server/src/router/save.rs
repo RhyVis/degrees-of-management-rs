@@ -41,7 +41,7 @@ pub async fn handle_save_get(
             return StatusCode::NOT_FOUND.into_response();
         }
     };
-    
+
     info!("Request save file: {}-{}-{}", game_id, instance_id, save_id);
 
     content.into_response()
@@ -57,7 +57,7 @@ pub async fn handle_save_del(
     };
 
     del_save_content(&game.get_save_path_append(&instance_id), &save_id);
-    
+
     info!("Delete save file: {}-{}", game_id, instance_id);
     format!("Successfully deleted {save_id}").into_response()
 }
@@ -78,9 +78,10 @@ pub async fn handle_save_upload(
         &instance_id,
         save_code,
     ) {
-        Ok(_) => { 
+        Ok(_) => {
             info!("Save file successfully: {}-{}", game_id, instance_id);
-            StatusCode::NO_CONTENT.into_response() },
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(err) => {
             error!(
                 "Failed to write save file ({game_id}-{instance_id}): {}",

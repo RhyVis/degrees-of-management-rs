@@ -4,8 +4,8 @@ use axum::http::StatusCode;
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use std::sync::Arc;
 use lazy_static::lazy_static;
+use std::sync::Arc;
 
 mod index;
 mod play;
@@ -23,10 +23,7 @@ pub fn get_router() -> Router<Arc<AppState>> {
 const ICON: &[u8] = include_bytes!("../../res/favicon.ico");
 
 lazy_static! {
-    static ref ICON_ETAG: String = format!(
-        "\"{}\"",
-        xxhash_rust::xxh3::xxh3_64(ICON)
-    );
+    static ref ICON_ETAG: String = format!("\"{}\"", xxhash_rust::xxh3::xxh3_64(ICON));
 }
 
 async fn get_icon() -> impl IntoResponse {
