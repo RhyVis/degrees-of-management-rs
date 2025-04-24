@@ -157,8 +157,21 @@ impl ModInfo {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InstanceInfo {
     pub id: String,
-    pub name: String,
     pub index: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
     pub mods: Vec<String>,
+    #[serde(default)]
     pub layers: Vec<String>,
+}
+
+impl InstanceInfo {
+    pub fn get_name(&self) -> String {
+        if let Some(name) = &self.name {
+            name.clone()
+        } else {
+            self.id.clone()
+        }
+    }
 }

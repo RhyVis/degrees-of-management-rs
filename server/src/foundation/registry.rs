@@ -53,7 +53,7 @@ fn load_games(registry: &mut GameRegistry) -> Result<()> {
     if let Some(config) = CONFIG.get() {
         if config.game_def.is_empty() {
             warn!(
-                "No game definitions in `game_def` found, consider adding some to the config file"
+                "No game definitions in 'game_def' found, consider adding some to the config file"
             );
             std::process::exit(666);
         } else {
@@ -102,9 +102,9 @@ fn load_index(game: &mut GameInfo) -> Result<()> {
     let ids: Vec<String> = names.iter().map(|(id, _)| id.clone()).collect();
 
     if names.is_empty() {
-        warn!("No index files found for `{}`", &game.id);
+        warn!("No index files found for '{}'", &game.id);
     } else {
-        info!("Found index files: {:?} for `{}`", ids, &game.id);
+        info!("Found index files: {:?} for '{}'", ids, &game.id);
     }
 
     for (id, file_name) in names {
@@ -123,9 +123,9 @@ fn load_layer(game: &mut GameInfo) -> Result<()> {
     let names = list_dir_name(&layer_dir)?;
 
     if names.is_empty() {
-        warn!("No layer directory found for `{}`", &game.id);
+        warn!("No layer directory found for '{}'", &game.id);
     } else {
-        info!("Found layer directories: {:?} for `{}`", names, &game.id);
+        info!("Found layer directories: {:?} for '{}'", names, &game.id);
     }
 
     for name in names {
@@ -145,9 +145,9 @@ fn load_mod(game: &mut GameInfo) -> Result<()> {
     let ids: Vec<String> = names.iter().map(|(id, _)| id.clone()).collect();
 
     if names.is_empty() {
-        warn!("No mod files found for `{}`", &game.id);
+        warn!("No mod files found for '{}'", &game.id);
     } else {
-        info!("Found mod files: {:?} for `{}`", ids, &game.id);
+        info!("Found mod files: {:?} for '{}'", ids, &game.id);
     }
 
     for (id, file_name) in names {
@@ -163,63 +163,109 @@ fn load_instance(game: &mut GameInfo) -> Result<()> {
     if !instance_dir.exists() {
         fs::create_dir(&instance_dir)?;
     }
-    let names = list_filename_limit_extension(&instance_dir, Some("json"))?;
-    let ids: Vec<String> = names.iter().map(|(id, _)| id.clone()).collect();
 
-    if names.is_empty() {
-        warn!("No instance files found for `{}`", &game.id);
-    } else {
-        info!("Found instance files: {:?} for `{}`", ids, &game.id);
-    }
+    let formats = vec!["json", "toml", "yaml"];
+    let mut loaded_instances = 0;
 
-    for (id, file_name) in names {
-        let path_to_file = instance_dir.join(file_name);
-        let instance: InstanceInfo = match fs::read_to_string(path_to_file) {
-            Ok(x) => match serde_json::from_str(&x) {
-                Ok(y) => y,
-                Err(e) => {
-                    error!("Failed to parse JSON file: {}", e);
-                    continue;
-                }
-            },
-            Err(e) => {
-                error!("Failed to read instance file: {}", e);
-                continue;
-            }
-        };
+    for format in formats {
+        let files = list_filename_limit_extension(&instance_dir, Some(format))?;
+        if !files.is_empty() {
+            debug!(
+                "Found {} {} instance files for '{}'",
+                files.len(),
+                format,
+                &game.id
+            );
 
-        let layer_ids = instance.layers.clone();
-        let mut layer_fs_collection = Vec::new();
-
-        for layer_id in &layer_ids {
-            if let Some(layer_info) = game.layers.get_mut(layer_id) {
-                match layer_info.get_fs() {
-                    Ok(layer_fs) => {
-                        layer_fs_collection.push(layer_fs.clone());
+            for (_, file_name) in files {
+                let path_to_file = instance_dir.join(&file_name);
+                match load_instance_from_file(&path_to_file, format) {
+                    Ok(instance) => {
+                        let id = instance.id.clone();
+                        if process_loaded_instance(game, instance)? {
+                            loaded_instances += 1;
+                        } else {
+                            warn!(
+                                "Instance '{}' defined in '{}' already loaded, skipping.",
+                                id, file_name
+                            );
+                        }
                     }
                     Err(e) => {
-                        error!("Failed to create layer file system for {}: {}", layer_id, e);
+                        error!("Failed to load instance file '{}': {}", file_name, e);
                     }
                 }
-            } else {
-                error!("Layer {} referenced by instance {} not found", layer_id, id);
-                panic!("Layer {} referenced by instance {} not found", layer_id, id);
             }
         }
+    }
 
-        let instance_fs = InstanceFS::new(&id, layer_fs_collection);
-
-        let stats = instance_fs.get_node_stats();
-        info!(
-            "Created instance '{}' fs contains {} nodes ({} dirs, {} files)",
-            &id, stats.total, stats.dirs, stats.files
-        );
-
-        game.instance_fs.insert(id.clone(), instance_fs);
-        game.instances.insert(id, instance);
+    if loaded_instances == 0 {
+        warn!("No instance files found for '{}'", &game.id);
+    } else {
+        info!("Loaded {} instances for '{}'", loaded_instances, &game.id);
     }
 
     Ok(())
+}
+
+fn load_instance_from_file(path: &std::path::Path, format: &str) -> Result<InstanceInfo> {
+    let content = fs::read_to_string(path)?;
+
+    match format {
+        "json" => serde_json::from_str(&content).map_err(|e| anyhow!("JSON parse error: {}", e)),
+        "toml" => toml::from_str(&content).map_err(|e| anyhow!("TOML parse error: {}", e)),
+        "yaml" => serde_yaml::from_str(&content).map_err(|e| anyhow!("YAML parse error: {}", e)),
+        _ => Err(anyhow!("Unsupported format: {}", format)),
+    }
+}
+
+fn process_loaded_instance(game: &mut GameInfo, instance: InstanceInfo) -> Result<bool> {
+    if game.instances.contains_key(&instance.id) {
+        return Ok(false);
+    }
+
+    if instance.layers.is_empty() {
+        warn!("No layers defined for '{}'", &game.id);
+    }
+
+    let layer_ids = instance.layers.clone();
+    let mut layer_fs_collection = Vec::new();
+
+    for layer_id in &layer_ids {
+        if let Some(layer_info) = game.layers.get_mut(layer_id) {
+            match layer_info.get_fs() {
+                Ok(layer_fs) => {
+                    layer_fs_collection.push(layer_fs.clone());
+                }
+                Err(e) => {
+                    error!("Failed to create layer file system for {}: {}", layer_id, e);
+                }
+            }
+        } else {
+            error!(
+                "Layer {} referenced by instance {} not found",
+                layer_id, &instance.id
+            );
+            return Err(anyhow!(
+                "Layer {} referenced by instance {} not found",
+                layer_id,
+                &instance.id
+            ));
+        }
+    }
+
+    let instance_fs = InstanceFS::new(&instance.id, layer_fs_collection);
+
+    let stats = instance_fs.get_node_stats();
+    info!(
+        "Created instance '{}' fs contains {} nodes ({} dirs, {} files)",
+        &instance.id, stats.total, stats.dirs, stats.files
+    );
+
+    game.instance_fs.insert(instance.id.clone(), instance_fs);
+    game.instances.insert(instance.id.clone(), instance);
+
+    Ok(true)
 }
 
 pub struct GameRegistry {

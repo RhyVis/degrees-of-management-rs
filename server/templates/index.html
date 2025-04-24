@@ -19,11 +19,13 @@
             background-color: #121212;
             color: #e0e0e0;
         }
+
         h1 {
             color: #bb86fc;
             text-align: center;
             margin-bottom: 30px;
         }
+
         h2 {
             color: #03dac6;
             margin-top: 25px;
@@ -31,6 +33,7 @@
             border-bottom: 1px solid #444;
             padding-bottom: 5px;
         }
+
         .instance-card {
             background-color: #1e1e1e;
             border-radius: 8px;
@@ -39,28 +42,34 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             border: 1px solid #333;
         }
+
         .instance-name {
             font-size: 1.2em;
             font-weight: bold;
             margin-bottom: 10px;
             color: #bb86fc;
         }
+
         .instance-info {
             margin-bottom: 10px;
             color: #b0b0b0;
         }
+
         .item-list {
             margin-left: 20px;
         }
+
         .item-list-item {
             display: block;
             margin-bottom: 3px;
             color: #d0d0d0;
         }
+
         .label {
             font-weight: bold;
             color: #03dac6;
         }
+
         .launch-button {
             display: inline-block;
             background-color: #bb86fc;
@@ -72,9 +81,11 @@
             margin-top: 10px;
             transition: background-color 0.2s;
         }
+
         .launch-button:hover {
             background-color: #9d4edd;
         }
+
         p {
             text-align: center;
             color: #b0b0b0;
@@ -88,7 +99,7 @@
 <h2>{{ game_id }}</h2>
 {% for instance in game_instances %}
 <div class="instance-card">
-    <div class="instance-name">{{ instance.name }}</div>
+    <div class="instance-name">{{ instance.get_name() }}</div>
     <div class="instance-info">ID: {{ instance.id }}</div>
     <div class="instance-info">
         <span class="label">Base Game:</span>
@@ -116,7 +127,8 @@
         </div>
     </div>
     {% endif %}
-    <a href="/play/{{ game_id }}/{{ instance.id }}/index" class="launch-button" target="_blank" rel="noopener noreferrer">Launch Game</a>
+    <a href="/play/{{ game_id }}/{{ instance.id }}/index" class="launch-button" target="_blank"
+       rel="noopener noreferrer">Launch Game</a>
 </div>
 {% endfor %}
 {% else %}
