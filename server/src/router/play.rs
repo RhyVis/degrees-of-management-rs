@@ -125,9 +125,29 @@ async fn handle_other_file(
     };
 
     match instance_fs.resolve_path(&path) {
-        Some(path) => {
-            let mime = mime_guess::from_path(&path).first_or_octet_stream();
-            match fs::read(path) {
+        Some(resolved_path) => {
+            let mime = mime_guess::from_path(&resolved_path).first_or_octet_stream();
+
+            match fs::metadata(&resolved_path) {
+                Ok(metadata) => {
+                    const MAX_FILE_SIZE: u64 = 64 * 1024 * 1024;
+                    if metadata.len() > MAX_FILE_SIZE {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            format!(
+                                "The file size exceeds the limit of {} MB",
+                                MAX_FILE_SIZE / 1024 / 1024
+                            ),
+                        )
+                            .into_response();
+                    }
+                }
+                Err(err) => {
+                    error!("Failed to get metadata: {}, path: {:?}", err, resolved_path);
+                }
+            }
+
+            match fs::read(&resolved_path) {
                 Ok(content) => (
                     StatusCode::OK,
                     [
@@ -142,7 +162,7 @@ async fn handle_other_file(
                 )
                     .into_response(),
                 Err(err) => {
-                    error!("Failed to read file: {}", err);
+                    error!("Failed to read file: {}, path: {:?}", err, resolved_path);
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         format!("Failed to read file: {}", err),

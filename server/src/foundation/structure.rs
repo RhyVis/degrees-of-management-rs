@@ -1,6 +1,6 @@
 use crate::foundation::config::GameDef;
 use crate::util::resolve::{InstanceFS, LayerFS};
-use anyhow::{Error, Result};
+use anyhow::{Error, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -67,7 +67,7 @@ pub trait FileInfo {
 
     fn read_bytes(&self) -> Result<Vec<u8>> {
         if !self.is_file() {
-            return Err(anyhow::anyhow!("FileInfo '{}' not a file", self.get_id()));
+            return Err(anyhow!("FileInfo '{}' not a file", self.get_id()));
         }
         fs::read(self.get_path()).map_err(Error::from)
     }

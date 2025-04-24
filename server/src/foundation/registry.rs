@@ -224,39 +224,38 @@ fn process_loaded_instance(game: &mut GameInfo, instance: InstanceInfo) -> Resul
         return Ok(false);
     }
 
-    if instance.layers.is_empty() {
-        warn!("No layers defined for '{}'", &game.id);
-    }
+    let mut layer_fs_collection = Vec::with_capacity(instance.layers.len());
 
-    let layer_ids = instance.layers.clone();
-    let mut layer_fs_collection = Vec::new();
-
-    for layer_id in &layer_ids {
-        if let Some(layer_info) = game.layers.get_mut(layer_id) {
-            match layer_info.get_fs() {
-                Ok(layer_fs) => {
-                    layer_fs_collection.push(layer_fs.clone());
+    for layer_id in &instance.layers {
+        match game.layers.get_mut(layer_id) {
+            Some(layer_info) => match layer_info.get_fs() {
+                Ok(layer_fs) => layer_fs_collection.push(layer_fs.clone()),
+                Err(err) => {
+                    error!(
+                        "Failed to create layer file system for {}: {}",
+                        layer_id, err
+                    );
+                    return Err(anyhow!(
+                        "Failed to create layer file system for {}: {}",
+                        layer_id,
+                        err
+                    ));
                 }
-                Err(e) => {
-                    error!("Failed to create layer file system for {}: {}", layer_id, e);
-                }
+            },
+            None => {
+                let error_msg = format!(
+                    "Layer {} referenced by instance {} not found",
+                    &instance.id, layer_id
+                );
+                error!("{}", error_msg);
+                return Err(anyhow!(error_msg));
             }
-        } else {
-            error!(
-                "Layer {} referenced by instance {} not found",
-                layer_id, &instance.id
-            );
-            return Err(anyhow!(
-                "Layer {} referenced by instance {} not found",
-                layer_id,
-                &instance.id
-            ));
         }
     }
 
     let instance_fs = InstanceFS::new(&instance.id, layer_fs_collection);
-
     let stats = instance_fs.get_node_stats();
+
     info!(
         "Created instance '{}' fs contains {} nodes ({} dirs, {} files)",
         &instance.id, stats.total, stats.dirs, stats.files

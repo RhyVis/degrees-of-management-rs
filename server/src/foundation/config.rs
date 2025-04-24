@@ -76,32 +76,31 @@ impl Config {
         let config_path = Self::get_config_path()?;
 
         if !config_path.exists() {
+            info!("Config does not exist, creating default config.");
             return Self::create_default();
         }
 
-        let config_content = match fs::read_to_string(&config_path) {
-            Ok(content) => content,
+        match fs::read_to_string(&config_path) {
+            Ok(config_content) => match toml::from_str::<Config>(&config_content) {
+                Ok(config) => {
+                    debug!("Loaded config: {:?}", &config);
+
+                    if !&config.get_data_path().exists() {
+                        fs::create_dir_all(&config.get_data_path())?;
+                    }
+
+                    Ok(config)
+                }
+                Err(err) => {
+                    error!("Cannot parse config file: {}", err);
+                    Self::create_default()
+                }
+            },
             Err(err) => {
                 error!("Cannot read config file: {}", err);
-                return Self::create_default();
+                Self::create_default()
             }
-        };
-
-        let config: Config = match toml::from_str(&config_content) {
-            Ok(config) => config,
-            Err(err) => {
-                error!("Cannot parse config file: {}", err);
-                return Self::create_default();
-            }
-        };
-
-        debug!("Loaded config: {:?}", &config);
-
-        if !&config.get_data_path().exists() {
-            fs::create_dir_all(&config.get_data_path())?;
         }
-
-        Ok(config)
     }
 
     #[allow(dead_code)]
