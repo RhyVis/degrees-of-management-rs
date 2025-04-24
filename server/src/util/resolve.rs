@@ -72,7 +72,7 @@ impl LayerFS {
         layer_fs.build_tree(layer_path)?;
 
         let elapsed = start.elapsed();
-        info!("LayerFS '{}' created in {:.2?} seconds", id, elapsed);
+        info!("LayerFS '{}' created in {:.2?}", id, elapsed);
 
         Ok(layer_fs)
     }
