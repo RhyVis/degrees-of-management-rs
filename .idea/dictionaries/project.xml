@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>endfor</w>
+      <w>ghcr</w>
     </words>
   </dictionary>
 </component>
