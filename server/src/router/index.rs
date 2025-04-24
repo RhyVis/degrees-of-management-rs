@@ -15,32 +15,26 @@ struct IndexTemplate<'a> {
 }
 
 pub async fn index_page(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let instance_map: Vec<((String, String), Vec<&InstanceInfo>)> = state
+    let mut instance_map: Vec<((String, String), Vec<&InstanceInfo>)> = state
         .registry
         .all()
         .iter()
         .map(|(id, game_info)| {
+            let mut instances: Vec<&InstanceInfo> = game_info
+                .instances
+                .iter()
+                .map(|(_, instance_info)| instance_info)
+                .collect();
+            instances.sort_by(|a, b| a.id.cmp(&b.id));
+
             if let Some(game_name) = &game_info.game_def.name {
-                (
-                    (id.clone(), game_name.clone()),
-                    game_info
-                        .instances
-                        .iter()
-                        .map(|(_, instance_info)| instance_info)
-                        .collect(),
-                )
+                ((id.clone(), game_name.clone()), instances)
             } else {
-                (
-                    (id.clone(), id.clone()),
-                    game_info
-                        .instances
-                        .iter()
-                        .map(|(_, instance_info)| instance_info)
-                        .collect(),
-                )
+                ((id.clone(), id.clone()), instances)
             }
         })
         .collect();
+    instance_map.sort_by(|a, b| a.0.0.cmp(&b.0.0));
     let template = IndexTemplate { instance_map };
 
     match template.render() {
