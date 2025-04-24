@@ -1,6 +1,6 @@
 use crate::foundation::structure::FileInfo;
 use crate::util::AppState;
-use crate::util::extract::extract_game_mod;
+use crate::util::extract::{extract_game, extract_game_mod};
 use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use std::sync::Arc;
 use tracing::error;
 
+pub const SAVE_SYNC_INTEGRATION_MOD_ID: &str = "save-sync-integration";
 const SAVE_SYNC_INTEGRATION_INTERNAL: &[u8] =
     include_bytes!("../../res/save-sync-integration.mod.zip");
 
@@ -29,7 +30,16 @@ async fn handle_mod_file(
     Path((game_id, mod_id)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    if mod_id == "save-sync-integration" {
+    let game_info = match extract_game(&state, &game_id) {
+        Ok(game_info) => game_info,
+        Err(response) => return response.into_response(),
+    };
+
+    if !game_info.game_def.use_mods {
+        return (StatusCode::BAD_REQUEST, "Game does not support mods").into_response();
+    }
+
+    if mod_id == SAVE_SYNC_INTEGRATION_MOD_ID {
         return (
             StatusCode::OK,
             [

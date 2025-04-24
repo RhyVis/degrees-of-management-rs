@@ -1,3 +1,4 @@
+use crate::foundation::config::GameDef;
 use crate::util::resolve::{InstanceFS, LayerFS};
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
@@ -14,10 +15,11 @@ pub struct GameInfo {
     pub mods: HashMap<String, ModInfo>,
 
     pub instance_fs: HashMap<String, InstanceFS>,
+    pub game_def: GameDef,
 }
 
 impl GameInfo {
-    pub fn of(id: &str, path: PathBuf) -> Self {
+    pub fn of(id: &str, path: PathBuf, def_copy: GameDef) -> Self {
         GameInfo {
             id: id.to_string(),
             path,
@@ -26,6 +28,7 @@ impl GameInfo {
             layers: HashMap::new(),
             mods: HashMap::new(),
             instance_fs: HashMap::new(),
+            game_def: def_copy,
         }
     }
 

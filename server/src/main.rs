@@ -9,6 +9,7 @@ use crate::util::AppState;
 use anyhow::Result;
 use axum::Router;
 use std::sync::Arc;
+use tokio::net::TcpListener;
 use tracing::info;
 
 #[tokio::main]
@@ -24,8 +25,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .merge(get_router())
         .with_state(Arc::new(AppState { registry }));
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-
+    let listener = TcpListener::bind(&addr).await?;
     info!("listening on {addr}");
 
     axum::serve(listener, app).await?;
