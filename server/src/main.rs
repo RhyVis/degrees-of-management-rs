@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
     init_config()?;
     let registry = init_registry()?;
 
-    let port = CONFIG.get().unwrap().port;
+    let port = CONFIG.get().expect("Config not initialized.").port;
     let addr = format!("0.0.0.0:{port}");
 
     let app = Router::new()
