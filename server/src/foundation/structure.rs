@@ -13,8 +13,6 @@ pub struct GameInfo {
     pub indexes: HashMap<String, IndexInfo>,
     pub layers: HashMap<String, LayerInfo>,
     pub mods: HashMap<String, ModInfo>,
-
-    pub instance_fs: HashMap<String, InstanceFS>,
     pub game_def: GameDef,
 }
 
@@ -27,7 +25,6 @@ impl GameInfo {
             indexes: HashMap::new(),
             layers: HashMap::new(),
             mods: HashMap::new(),
-            instance_fs: HashMap::new(),
             game_def: def_copy,
         }
     }
@@ -164,6 +161,8 @@ pub struct InstanceInfo {
     pub mods: Vec<String>,
     #[serde(default)]
     pub layers: Vec<String>,
+    #[serde(skip)]
+    pub fs: Option<InstanceFS>,
 }
 
 impl InstanceInfo {
@@ -173,5 +172,9 @@ impl InstanceInfo {
         } else {
             self.id.clone()
         }
+    }
+
+    pub fn get_fs(&self) -> Option<&InstanceFS> {
+        self.fs.as_ref()
     }
 }

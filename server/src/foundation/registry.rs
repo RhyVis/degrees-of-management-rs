@@ -219,7 +219,7 @@ fn load_instance_from_file(path: &std::path::Path, format: &str) -> Result<Insta
     }
 }
 
-fn process_loaded_instance(game: &mut GameInfo, instance: InstanceInfo) -> Result<bool> {
+fn process_loaded_instance(game: &mut GameInfo, mut instance: InstanceInfo) -> Result<bool> {
     if game.instances.contains_key(&instance.id) {
         return Ok(false);
     }
@@ -261,7 +261,7 @@ fn process_loaded_instance(game: &mut GameInfo, instance: InstanceInfo) -> Resul
         &instance.id, stats.total, stats.dirs, stats.files
     );
 
-    game.instance_fs.insert(instance.id.clone(), instance_fs);
+    instance.fs = Some(instance_fs);
     game.instances.insert(instance.id.clone(), instance);
 
     Ok(true)

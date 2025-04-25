@@ -1,7 +1,7 @@
 use crate::router::repo::SAVE_SYNC_INTEGRATION_MOD_ID;
 use crate::router::save;
 use crate::util::AppState;
-use crate::util::extract::{extract_game, extract_game_instance, extract_index};
+use crate::util::extract::{extract_game_instance, extract_index};
 use crate::util::file::{etag_check, etag_hash};
 use axum::extract::{Path, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG};
@@ -123,12 +123,12 @@ async fn handle_other_file(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let game = match extract_game(&state, &game_id) {
+    let (_, instance) = match extract_game_instance(&state, &game_id, &instance_id) {
         Ok(result) => result,
         Err(response) => return response.into_response(),
     };
 
-    let instance_fs = match game.instance_fs.get(&instance_id) {
+    let instance_fs = match instance.get_fs() {
         Some(fs) => fs,
         None => {
             error!(
