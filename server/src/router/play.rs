@@ -2,9 +2,10 @@ use crate::router::repo::SAVE_SYNC_INTEGRATION_MOD_ID;
 use crate::router::save;
 use crate::util::AppState;
 use crate::util::extract::{extract_game, extract_game_instance, extract_index};
+use crate::util::file::{etag_check, etag_hash};
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -37,6 +38,7 @@ pub fn routes() -> Router<Arc<AppState>> {
 async fn handle_play_index(
     Path((game_id, instance_id)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let (game, instance) = match extract_game_instance(&state, &game_id, &instance_id) {
         Ok(result) => result,
@@ -51,8 +53,24 @@ async fn handle_play_index(
 
     info!("Game playing: ({}) {}", &game_id, &instance_id);
 
-    match fs::read_to_string(&index_info.path) {
-        Ok(content) => Html(content).into_response(),
+    match fs::read(&index_info.path) {
+        Ok(content) => {
+            if let Some(response) = etag_check(&content, &headers) {
+                return response;
+            }
+
+            let etag_val = etag_hash(&content);
+            (
+                StatusCode::OK,
+                [
+                    (CONTENT_TYPE, "text/html; charset=utf-8"),
+                    (CACHE_CONTROL, "public, max-age=31536000"),
+                    (ETAG, etag_val.as_str()),
+                ],
+                Html(String::from_utf8_lossy(&content).to_string()),
+            )
+                .into_response()
+        }
         Err(err) => {
             error!(
                 "Unable to read index file of {}: {}, {}",
@@ -103,6 +121,7 @@ async fn handle_mod_list(
 async fn handle_other_file(
     Path((game_id, instance_id, path)): Path<(String, String, String)>,
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let game = match extract_game(&state, &game_id) {
         Ok(result) => result,
@@ -148,19 +167,23 @@ async fn handle_other_file(
             }
 
             match fs::read(&resolved_path) {
-                Ok(content) => (
-                    StatusCode::OK,
-                    [
-                        (CONTENT_TYPE, mime.as_ref()),
-                        (CACHE_CONTROL, "public, max-age=31536000"),
-                        (
-                            ETAG,
-                            format!("\"{}\"", xxhash_rust::xxh3::xxh3_64(&content)).as_str(),
-                        ),
-                    ],
-                    content,
-                )
-                    .into_response(),
+                Ok(content) => {
+                    if let Some(response) = etag_check(&content, &headers) {
+                        return response;
+                    }
+
+                    let etag_val = etag_hash(&content);
+                    (
+                        StatusCode::OK,
+                        [
+                            (CONTENT_TYPE, mime.as_ref()),
+                            (CACHE_CONTROL, "public, max-age=31536000"),
+                            (ETAG, etag_val.as_str()),
+                        ],
+                        content,
+                    )
+                        .into_response()
+                }
                 Err(err) => {
                     error!("Failed to read file: {}, path: {:?}", err, resolved_path);
                     (

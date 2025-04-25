@@ -1,4 +1,7 @@
 use anyhow::Result;
+use axum::http::header::{CACHE_CONTROL, ETAG, IF_NONE_MATCH};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 use std::fs;
 use std::path::Path;
 
@@ -77,4 +80,31 @@ pub fn list_dir_name(path: &Path) -> Result<Vec<String>> {
     }
 
     Ok(names)
+}
+
+pub fn etag_hash(content: &Vec<u8>) -> String {
+    format!("\"{}\"", xxhash_rust::xxh3::xxh3_64(content))
+}
+
+pub fn etag_check(content: &Vec<u8>, headers: &HeaderMap) -> Option<Response> {
+    let etag_val = etag_hash(content);
+
+    if let Some(if_not_match) = headers.get(IF_NONE_MATCH) {
+        if let Ok(cli_tag) = if_not_match.to_str() {
+            if cli_tag == etag_val {
+                return Some(
+                    (
+                        StatusCode::NOT_MODIFIED,
+                        [
+                            (CACHE_CONTROL, "public, max-age=31536000"),
+                            (ETAG, etag_val.as_str()),
+                        ],
+                    )
+                        .into_response(),
+                );
+            }
+        }
+    }
+
+    None
 }

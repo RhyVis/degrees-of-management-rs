@@ -1,10 +1,11 @@
 use crate::foundation::structure::FileInfo;
 use crate::util::AppState;
 use crate::util::extract::{extract_game, extract_game_mod};
+use crate::util::file::{etag_check, etag_hash};
 use axum::Router;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG};
+use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG, IF_NONE_MATCH};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use lazy_static::lazy_static;
@@ -29,6 +30,7 @@ pub fn routes() -> Router<Arc<AppState>> {
 async fn handle_mod_file(
     Path((game_id, mod_id)): Path<(String, String)>,
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let game_info = match extract_game(&state, &game_id) {
         Ok(game_info) => game_info,
@@ -40,6 +42,21 @@ async fn handle_mod_file(
     }
 
     if mod_id == SAVE_SYNC_INTEGRATION_MOD_ID {
+        if let Some(if_not_match) = headers.get(IF_NONE_MATCH) {
+            if let Ok(cli_tag) = if_not_match.to_str() {
+                if cli_tag == SAVE_SYNC_INTEGRATION_ETAG.as_str() {
+                    return (
+                        StatusCode::NOT_MODIFIED,
+                        [
+                            (CACHE_CONTROL, "public, max-age=31536000"),
+                            (ETAG, SAVE_SYNC_INTEGRATION_ETAG.as_str()),
+                        ],
+                    )
+                        .into_response();
+                }
+            }
+        }
+
         return (
             StatusCode::OK,
             [
@@ -72,5 +89,19 @@ async fn handle_mod_file(
         }
     };
 
-    (StatusCode::OK, [(CONTENT_TYPE, "application/zip")], file).into_response()
+    if let Some(response) = etag_check(&file, &headers) {
+        return response;
+    }
+
+    let etag_val = etag_hash(&file);
+    (
+        StatusCode::OK,
+        [
+            (CONTENT_TYPE, "application/zip"),
+            (CACHE_CONTROL, "public, max-age=31536000"),
+            (ETAG, etag_val.as_str()),
+        ],
+        file,
+    )
+        .into_response()
 }
