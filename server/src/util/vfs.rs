@@ -124,7 +124,7 @@ impl LayerFS {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InstanceFS {
     pub root: FSNode,
 }

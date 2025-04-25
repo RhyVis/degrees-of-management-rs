@@ -151,7 +151,7 @@ impl ModInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct InstanceInfo {
     pub id: String,
     pub index: String,
