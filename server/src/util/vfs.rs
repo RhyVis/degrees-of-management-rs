@@ -4,61 +4,16 @@ use rayon::prelude::IntoParallelRefIterator;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::Instant;
 use tracing::info;
-use xxhash_rust::xxh3::xxh3_64;
 
 #[derive(Debug, Clone)]
 pub enum FSNode {
-    File {
-        id: u64,
-        real_path: Arc<PathBuf>,
-    },
-    Directory {
-        id: u64,
-        children: HashMap<String, Arc<FSNode>>,
-    },
+    File { real_path: PathBuf },
+    Directory { children: HashMap<String, FSNode> },
 }
 
-impl FSNode {
-    pub fn new_file(real_path: PathBuf) -> Arc<Self> {
-        let path_str = real_path.to_string_lossy();
-        let id = xxh3_64(path_str.as_bytes());
-
-        Arc::new(FSNode::File {
-            id,
-            real_path: Arc::new(real_path),
-        })
-    }
-
-    pub fn new_directory(children: HashMap<String, Arc<Self>>) -> Arc<Self> {
-        let mut hasher = xxh3_64(b"dir");
-        for (name, child) in &children {
-            hasher ^= xxh3_64(name.as_bytes());
-            hasher = hasher.rotate_left(7) ^ child.get_id();
-        }
-
-        Arc::new(FSNode::Directory {
-            id: hasher,
-            children,
-        })
-    }
-
-    pub fn get_id(&self) -> u64 {
-        match self {
-            FSNode::File { id, .. } => *id,
-            FSNode::Directory { id, .. } => *id,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn equals(&self, other: &FSNode) -> bool {
-        self.get_id() == other.get_id()
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeStats {
     pub files: usize,
     pub dirs: usize,
@@ -101,14 +56,17 @@ pub trait FileSystemTree {
 
 #[derive(Debug, Clone)]
 pub struct LayerFS {
-    pub root: Arc<FSNode>,
+    pub root: FSNode,
 }
 
 impl LayerFS {
     pub fn new(id: &str, layer_path: &Path) -> Result<Self> {
         let start = Instant::now();
 
-        let root = FSNode::new_directory(HashMap::new());
+        let root = FSNode::Directory {
+            children: HashMap::new(),
+        };
+
         let mut layer_fs = LayerFS { root };
 
         layer_fs.build_tree(layer_path)?;
@@ -120,7 +78,10 @@ impl LayerFS {
     }
 
     fn build_tree(&mut self, path: &Path) -> Result<()> {
-        if let FSNode::Directory { children, .. } = Arc::make_mut(&mut self.root) {
+        if let FSNode::Directory {
+            ref mut children, ..
+        } = self.root
+        {
             Self::build_tree_recursive(path, path, children)?;
         }
         Ok(())
@@ -129,14 +90,13 @@ impl LayerFS {
     fn build_tree_recursive(
         base_path: &Path,
         current_path: &Path,
-        children: &mut HashMap<String, Arc<FSNode>>,
+        children: &mut HashMap<String, FSNode>,
     ) -> Result<()> {
         let entries: Vec<_> = fs::read_dir(current_path)?
             .filter_map(|entry| entry.ok())
             .collect();
-        let mut results = HashMap::with_capacity(entries.len());
 
-        let new_entries: Vec<_> = entries
+        let results: HashMap<_, _> = entries
             .par_iter()
             .map(|entry| {
                 let path = entry.path();
@@ -146,40 +106,40 @@ impl LayerFS {
                     let mut dir_children = HashMap::new();
                     let _ = Self::build_tree_recursive(base_path, &path, &mut dir_children);
 
-                    let node = FSNode::new_directory(dir_children);
-                    (file_name, node)
+                    (
+                        file_name.clone(),
+                        FSNode::Directory {
+                            children: dir_children,
+                        },
+                    )
                 } else {
-                    let node = FSNode::new_file(path);
-                    (file_name, node)
+                    (file_name.clone(), FSNode::File { real_path: path })
                 }
             })
             .collect();
 
-        results.extend(new_entries);
         children.extend(results);
 
         Ok(())
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InstanceFS {
-    pub root: Arc<FSNode>,
+    pub root: FSNode,
 }
 
 impl InstanceFS {
     pub fn new(id: &str, layers: Vec<LayerFS>) -> Self {
         let start = Instant::now();
 
-        let root = if let Some(last_layer) = layers.last() {
-            last_layer.root.clone()
-        } else {
-            FSNode::new_directory(HashMap::new())
+        let root = FSNode::Directory {
+            children: HashMap::new(),
         };
 
         let mut instance_fs = InstanceFS { root };
 
-        for layer in layers.iter().rev().skip(1) {
+        for layer in &layers {
             instance_fs.merge_layer(layer);
         }
 
@@ -196,76 +156,68 @@ impl InstanceFS {
 
     fn merge_layer(&mut self, layer: &LayerFS) {
         if let (
+            FSNode::Directory { children, .. },
             FSNode::Directory {
-                children: target_children,
+                children: layer_children,
                 ..
             },
-            FSNode::Directory {
-                children: source_children,
-                ..
-            },
-        ) = (&mut *Arc::make_mut(&mut self.root), &*layer.root)
+        ) = (&mut self.root, &layer.root)
         {
-            Self::merge_directories(target_children, source_children);
+            Self::merge_directories(children, layer_children);
         }
     }
 
-    fn merge_directories(
-        target: &mut HashMap<String, Arc<FSNode>>,
-        source: &HashMap<String, Arc<FSNode>>,
-    ) {
-        for (name, source_node) in source {
-            match &**source_node {
-                FSNode::Directory { .. } => {
-                    // Same name dir
-                    if let Some(target_node) = target.get_mut(name) {
-                        if let FSNode::Directory {
-                            children: target_children,
-                            ..
-                        } = &mut *Arc::make_mut(target_node)
-                        {
-                            if let FSNode::Directory {
-                                children: ref source_dir_children,
-                                ..
-                            } = **source_node
-                            {
-                                Self::merge_directories(target_children, source_dir_children);
-                            }
-                        } else {
-                            // Target is a file, replace it with the directory
-                            target.insert(name.clone(), Arc::clone(source_node));
-                        }
+    fn merge_directories(target: &mut HashMap<String, FSNode>, source: &HashMap<String, FSNode>) {
+        for (name, node) in source {
+            match node {
+                FSNode::Directory {
+                    children: source_children,
+                    ..
+                } => {
+                    // 如果目标中已存在同名目录，则递归合并
+                    if let Some(FSNode::Directory {
+                        children: target_children,
+                        ..
+                    }) = target.get_mut(name)
+                    {
+                        Self::merge_directories(target_children, source_children);
                     } else {
-                        // Skip cloning, insert directly
-                        target.insert(name.clone(), Arc::clone(source_node));
+                        // 否则直接克隆整个目录结构
+                        target.insert(name.clone(), node.clone());
                     }
                 }
                 FSNode::File { .. } => {
-                    // File always replaces the target
-                    target.insert(name.clone(), Arc::clone(source_node));
+                    // 文件总是覆盖
+                    target.insert(name.clone(), node.clone());
                 }
             }
         }
     }
 
+    // 查找文件的实际路径
     pub fn resolve_path(&self, virtual_path: &str) -> Option<PathBuf> {
-        let mut current_node = &*self.root;
+        let parts: Vec<&str> = virtual_path.split('/').filter(|p| !p.is_empty()).collect();
+        self.resolve_path_parts(&parts, &self.root)
+    }
 
-        for part in virtual_path.split('/').filter(|p| !p.is_empty()) {
-            match current_node {
-                FSNode::Directory { children, .. } => {
-                    if let Some(node) = children.get(part) {
-                        current_node = &**node;
-                    } else {
-                        return None;
-                    }
-                }
-                _ => return None,
-            }
+    fn resolve_path_parts(&self, parts: &[&str], node: &FSNode) -> Option<PathBuf> {
+        if parts.is_empty() {
+            return None;
         }
 
-        match current_node {
-            FSNode::File { real_path, .. } => Some((**real_path).clone()),
+        match node {
+            FSNode::Directory { children, .. } => {
+                if let Some(child) = children.get(parts[0]) {
+                    if parts.len() == 1 {
+                        if let FSNode::File { real_path, .. } = child {
+                            return Some(real_path.clone());
+                        }
+                    } else {
+                        return self.resolve_path_parts(&parts[1..], child);
+                    }
+                }
+                None
+            }
             _ => None,
         }
     }
@@ -273,12 +225,12 @@ impl InstanceFS {
 
 impl FileSystemTree for LayerFS {
     fn get_root(&self) -> &FSNode {
-        &*self.root
+        &self.root
     }
 }
 
 impl FileSystemTree for InstanceFS {
     fn get_root(&self) -> &FSNode {
-        &*self.root
+        &self.root
     }
 }
