@@ -1,5 +1,5 @@
 use crate::foundation::config::GameDef;
-use crate::util::resolve::{InstanceFS, LayerFS};
+use crate::util::vfs::{InstanceFS, LayerFS};
 use anyhow::{Error, Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

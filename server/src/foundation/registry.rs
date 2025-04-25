@@ -1,7 +1,7 @@
 use crate::foundation::config::{CONFIG, Config};
 use crate::foundation::structure::{GameInfo, IndexInfo, InstanceInfo, LayerInfo, ModInfo};
 use crate::util::file::{list_dir_name, list_filename_limit_extension};
-use crate::util::resolve::{FileSystemTree, InstanceFS};
+use crate::util::vfs::{FileSystemTree, InstanceFS};
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fs;
