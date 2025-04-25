@@ -41,7 +41,7 @@ pub fn extract_game_instance<'a>(
 pub fn extract_game_mod<'a>(
     state: &'a Arc<AppState>,
     game_id: &'a str,
-    mod_id: &str,
+    mod_id: &'a str,
 ) -> Result<&'a ModInfo, (StatusCode, String)> {
     let game = state.registry.get(game_id).ok_or_else(|| {
         (
@@ -62,7 +62,7 @@ pub fn extract_game_mod<'a>(
 
 pub fn extract_index<'a>(
     game: &'a GameInfo,
-    index_id: &str,
+    index_id: &'a str,
 ) -> Result<&'a IndexInfo, (StatusCode, String)> {
     game.indexes
         .get(index_id)
