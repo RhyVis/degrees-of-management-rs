@@ -1,3 +1,4 @@
+use crate::constants::CACHE_HEADER;
 use crate::foundation::structure::FileInfo;
 use crate::util::AppState;
 use crate::util::extract::{extract_game, extract_game_mod};
@@ -48,7 +49,7 @@ async fn handle_mod_file(
                     return (
                         StatusCode::NOT_MODIFIED,
                         [
-                            (CACHE_CONTROL, "public, max-age=31536000"),
+                            (CACHE_CONTROL, CACHE_HEADER),
                             (ETAG, SAVE_SYNC_INTEGRATION_ETAG.as_str()),
                         ],
                     )
@@ -61,7 +62,7 @@ async fn handle_mod_file(
             StatusCode::OK,
             [
                 (CONTENT_TYPE, "application/zip"),
-                (CACHE_CONTROL, "public, max-age=31536000"),
+                (CACHE_CONTROL, CACHE_HEADER),
                 (ETAG, &SAVE_SYNC_INTEGRATION_ETAG),
             ],
             SAVE_SYNC_INTEGRATION_INTERNAL,
@@ -98,7 +99,7 @@ async fn handle_mod_file(
         StatusCode::OK,
         [
             (CONTENT_TYPE, "application/zip"),
-            (CACHE_CONTROL, "public, max-age=31536000"),
+            (CACHE_CONTROL, CACHE_HEADER),
             (ETAG, etag_val.as_str()),
         ],
         file,

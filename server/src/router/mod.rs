@@ -1,7 +1,9 @@
+use crate::constants::CACHE_HEADER;
 use crate::util::AppState;
+use crate::util::file::etag_check;
 use axum::Router;
-use axum::http::StatusCode;
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE, ETAG};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use lazy_static::lazy_static;
@@ -26,12 +28,16 @@ lazy_static! {
     static ref ICON_ETAG: String = format!("\"{}\"", xxhash_rust::xxh3::xxh3_64(ICON));
 }
 
-async fn get_icon() -> impl IntoResponse {
+async fn get_icon(headers: HeaderMap) -> impl IntoResponse {
+    if let Some(response) = etag_check(&ICON.to_vec(), &headers) {
+        return response;
+    }
+
     (
         StatusCode::OK,
         [
-            (CONTENT_TYPE, "application/zip"),
-            (CACHE_CONTROL, "public, max-age=31536000"),
+            (CONTENT_TYPE, "image/x-icon"),
+            (CACHE_CONTROL, CACHE_HEADER),
             (ETAG, &ICON_ETAG),
         ],
         ICON,

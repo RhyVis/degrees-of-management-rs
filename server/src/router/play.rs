@@ -1,3 +1,4 @@
+use crate::constants::CACHE_HEADER;
 use crate::router::repo::SAVE_SYNC_INTEGRATION_MOD_ID;
 use crate::router::save;
 use crate::util::AppState;
@@ -64,7 +65,7 @@ async fn handle_play_index(
                 StatusCode::OK,
                 [
                     (CONTENT_TYPE, "text/html; charset=utf-8"),
-                    (CACHE_CONTROL, "public, max-age=31536000"),
+                    (CACHE_CONTROL, CACHE_HEADER),
                     (ETAG, etag_val.as_str()),
                 ],
                 Html(String::from_utf8_lossy(&content).to_string()),
@@ -177,7 +178,7 @@ async fn handle_other_file(
                         StatusCode::OK,
                         [
                             (CONTENT_TYPE, mime.as_ref()),
-                            (CACHE_CONTROL, "public, max-age=31536000"),
+                            (CACHE_CONTROL, CACHE_HEADER),
                             (ETAG, etag_val.as_str()),
                         ],
                         content,
